@@ -1,3 +1,6 @@
+
+
+
 export default function Home() {
   const bookingUrl = process.env.SMOOBU_BOOKING_EXTERNAL_URL || '#';
 
@@ -14,6 +17,8 @@ export default function Home() {
       >
         Reservar (abre Smoobu)
       </a>
+
+     
     </main>
   );
 }
