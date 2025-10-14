@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 type ApiResponse = {
   ok: boolean;
@@ -18,12 +18,6 @@ type ApiResponse = {
   };
 };
 
-const PROPERTY_NAMES: Record<string, string> = {
-  '2113656': 'ALDEA 104 2',
-  '2254116': 'ALDEA 111',
-  '2646938': 'ALDEA 121',
-};
-
 export default function RatesPreview() {
   const [start, setStart] = useState('2025-11-01');
   const [end, setEnd] = useState('2025-11-05');
@@ -33,6 +27,25 @@ export default function RatesPreview() {
   >([]);
   const [isMock, setIsMock] = useState<boolean | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
+
+  // NOMBRES DINÁMICOS (reemplaza al diccionario hardcodeado)
+  const [names, setNames] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch('/api/smoobu/apartments', { cache: 'no-store' });
+        const j = await r.json(); // { ok, mock?, data: { apartments: [{id,name}] } }
+        const map: Record<string, string> = {};
+        (j?.data?.apartments || []).forEach((a: any) => {
+          map[String(a.id)] = a.name;
+        });
+        setNames(map);
+      } catch {
+        // si falla, dejamos el map vacío
+      }
+    })();
+  }, []);
 
   async function onFetch(e: React.FormEvent) {
     e.preventDefault();
@@ -46,7 +59,7 @@ export default function RatesPreview() {
       const out: { propertyId: string; date: string; price: number; available: number; minLOS: number }[] = [];
       const data = json?.data?.data || {};
       Object.entries(data).forEach(([propertyId, byDate]) => {
-        Object.entries(byDate).forEach(([date, v]) => {
+        Object.entries(byDate as any).forEach(([date, v]: any) => {
           out.push({
             propertyId,
             date,
@@ -57,8 +70,9 @@ export default function RatesPreview() {
         });
       });
 
-      // orden: por propertyId y fecha
-      out.sort((a, b) => (a.propertyId === b.propertyId ? a.date.localeCompare(b.date) : a.propertyId.localeCompare(b.propertyId)));
+      out.sort((a, b) =>
+        a.propertyId === b.propertyId ? a.date.localeCompare(b.date) : a.propertyId.localeCompare(b.propertyId)
+      );
       setRows(out);
     } catch (err: any) {
       setError(err?.message ?? 'Error inesperado');
@@ -74,11 +88,23 @@ export default function RatesPreview() {
       <form onSubmit={onFetch} className="mt-4 grid max-w-md gap-3">
         <label className="grid gap-1">
           <span className="text-sm text-slate-600">Desde</span>
-          <input type="date" value={start} onChange={e => setStart(e.target.value)} className="rounded border px-3 py-2" required />
+          <input
+            type="date"
+            value={start}
+            onChange={e => setStart(e.target.value)}
+            className="rounded border px-3 py-2"
+            required
+          />
         </label>
         <label className="grid gap-1">
           <span className="text-sm text-slate-600">Hasta</span>
-          <input type="date" value={end} onChange={e => setEnd(e.target.value)} className="rounded border px-3 py-2" required />
+          <input
+            type="date"
+            value={end}
+            onChange={e => setEnd(e.target.value)}
+            className="rounded border px-3 py-2"
+            required
+          />
         </label>
         <button
           type="submit"
@@ -113,7 +139,7 @@ export default function RatesPreview() {
             <tbody>
               {rows.map((r, i) => (
                 <tr key={i} className="odd:bg-white even:bg-slate-50">
-                  <td className="border px-3 py-2">{PROPERTY_NAMES[r.propertyId] ?? '(sin nombre)'}</td>
+                  <td className="border px-3 py-2">{names[r.propertyId] ?? '(sin nombre)'}</td>
                   <td className="border px-3 py-2">{r.propertyId}</td>
                   <td className="border px-3 py-2">{r.date}</td>
                   <td className="border px-3 py-2">${r.price}</td>
