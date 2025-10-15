@@ -1,5 +1,6 @@
 
 import RatesPreview from "./RatesPreview";
+import AvailabilityPreview from "./AvailabilityPreview";
 
 export default function Home() {
   const bookingUrl = process.env.SMOOBU_BOOKING_EXTERNAL_URL || '#';
