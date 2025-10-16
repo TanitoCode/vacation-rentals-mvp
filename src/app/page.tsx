@@ -20,7 +20,7 @@ export default function Home() {
       </a>
 
      <RatesPreview />
-     
+      <AvailabilityPreview bookingBase={bookingUrl} />
     </main>
   );
 }

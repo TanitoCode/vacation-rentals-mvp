@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react';
 
+
 type Quote = { apartmentId: string; available: boolean; total: number };
 type ApiResp = { ok: boolean; mock?: boolean; data?: { currency?: string; quotes?: Quote[] } };
 
-export default function AvailabilityPreview() {
+export default function AvailabilityPreview({ bookingBase }: { bookingBase: string }) {
   const [start, setStart] = useState('2025-11-01');
   const [end, setEnd] = useState('2025-11-05');
   const [guests, setGuests] = useState(2);
@@ -25,7 +26,7 @@ export default function AvailabilityPreview() {
         const map: Record<string, string> = {};
         (j?.data?.apartments || []).forEach((a: any) => (map[String(a.id)] = a.name));
         setNames(map);
-      } catch {}
+      } catch { }
     })();
   }, []);
 
@@ -86,6 +87,14 @@ export default function AvailabilityPreview() {
                 <div className="font-semibold">{names[q.apartmentId] ?? `Propiedad ${q.apartmentId}`}</div>
                 <div className="text-sm text-slate-600">ID: {q.apartmentId}</div>
                 <div className="mt-1">Total: <strong>{currency} {q.total}</strong></div>
+                <a
+                  href={`${bookingBase}?apartmentId=${q.apartmentId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 inline-flex items-center rounded-lg bg-blue-600 px-3 py-1.5 text-white hover:bg-blue-700"
+                >
+                  Reservar en Smoobu
+                </a>
               </li>
             ))}
           </ul>
