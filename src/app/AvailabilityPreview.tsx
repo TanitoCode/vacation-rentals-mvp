@@ -54,7 +54,13 @@ export default function AvailabilityPreview({ bookingBase }: { bookingBase: stri
     }
   }
 
-  const available = quotes.filter(q => q.available);
+// listas derivadas
+const available = quotes.filter(q => q.available);
+const availableSorted = available.slice().sort(
+  (a, b) => (a.total - b.total) || a.apartmentId.localeCompare(b.apartmentId)
+);
+
+
 
   return (
     <section className="mt-10">
@@ -90,12 +96,12 @@ export default function AvailabilityPreview({ bookingBase }: { bookingBase: stri
         <div className="mt-4">
           <h3 className="font-medium mb-2">Disponibles ({available.length})</h3>
           <ul className="space-y-2">
-            {available.map((q) => (
+            {availableSorted.map((q) => (
               <li key={q.apartmentId} className="rounded border p-3">
                 <div className="font-semibold">{names[q.apartmentId] ?? `Propiedad ${q.apartmentId}`}</div>
                 <div className="text-sm text-slate-600">ID: {q.apartmentId}</div>
                 <div className="mt-1">Total: <strong>{fmt(q.total, currency)}</strong></div>
-                
+
                 <a
                   href={`${bookingBase}?apartmentId=${q.apartmentId}`}
                   target="_blank"
