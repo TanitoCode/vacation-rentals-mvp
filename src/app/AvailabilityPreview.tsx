@@ -6,6 +6,14 @@ import { useEffect, useState } from 'react';
 type Quote = { apartmentId: string; available: boolean; total: number };
 type ApiResp = { ok: boolean; mock?: boolean; data?: { currency?: string; quotes?: Quote[] } };
 
+function fmt(amount: number, currency: string) {
+  try {
+    return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(amount);
+  } catch {
+    return `${currency} ${amount.toFixed(2)}`;
+  }
+}
+
 export default function AvailabilityPreview({ bookingBase }: { bookingBase: string }) {
   const [start, setStart] = useState('2025-11-01');
   const [end, setEnd] = useState('2025-11-05');
@@ -86,7 +94,8 @@ export default function AvailabilityPreview({ bookingBase }: { bookingBase: stri
               <li key={q.apartmentId} className="rounded border p-3">
                 <div className="font-semibold">{names[q.apartmentId] ?? `Propiedad ${q.apartmentId}`}</div>
                 <div className="text-sm text-slate-600">ID: {q.apartmentId}</div>
-                <div className="mt-1">Total: <strong>{currency} {q.total}</strong></div>
+                <div className="mt-1">Total: <strong>{fmt(q.total, currency)}</strong></div>
+                
                 <a
                   href={`${bookingBase}?apartmentId=${q.apartmentId}`}
                   target="_blank"
