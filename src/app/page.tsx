@@ -19,7 +19,9 @@ export default function Home() {
         Reservar (abre Smoobu)
       </a>
 
-     <RatesPreview />
+     {/* Mostrar solo si el flag está activado */}
+      {process.env.NEXT_PUBLIC_SHOW_PREVIEWS === '1' && <RatesPreview />}
+      
       <AvailabilityPreview bookingBase={bookingUrl} />
     </main>
   );
