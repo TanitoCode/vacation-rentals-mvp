@@ -1,11 +1,39 @@
 export const dynamic = 'force-dynamic';
 
 const BASE = 'https://login.smoobu.com';
-const IDS = ['2113656', '2254116', '2646938']; // tus IDs reales
 const CUSTOMER_ID = (process.env.SMOOBU_CUSTOMER_ID || '').trim();
 
 const isProd = process.env.NODE_ENV === 'production';
 const useMock = process.env.USE_MOCK === '1'; // <-- control explícito
+
+let cachedIds: string[] | null = null;
+
+async function resolveApartmentIds(BASE: string): Promise<string[]> {
+  // 1) Si en .env definís una lista manual (opcional), úsala
+  const fromEnv = (process.env.SMOOBU_APARTMENT_IDS || '')
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
+  if (fromEnv.length > 0) {
+    return (cachedIds = fromEnv);
+  }
+
+  // 2) Si ya los obtuvimos, usa el cache
+  if (cachedIds && cachedIds.length > 0) return cachedIds;
+
+  // 3) Consultar a Smoobu y tomar TODOS los IDs
+  const res = await fetch(`${BASE}/api/apartments`, {
+    headers: { 'Api-Key': process.env.SMOOBU_API_KEY! }
+  });
+  const json = await res.json();
+
+  // Estructuras tolerantes: (a) array directo o (b) {apartments:[...]}
+  const list = Array.isArray(json) ? json : (json?.apartments || json?.data?.apartments || []);
+  const ids = list.map((a: any) => String(a.id)).filter(Boolean);
+
+  return (cachedIds = ids);
+}
+
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -52,10 +80,12 @@ export async function GET(req: Request) {
     );
   }
 
+  const ids = await resolveApartmentIds(BASE);
+
   const body = {
     arrivalDate: start,
     departureDate: end,
-    apartments: IDS,
+    apartments: ids,
     adults: guests,
     children: 0,
     customerId: CUSTOMER_ID
