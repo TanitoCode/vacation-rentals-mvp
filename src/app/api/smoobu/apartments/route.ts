@@ -1,8 +1,21 @@
 export const dynamic = 'force-dynamic';
 
 const BASE = 'https://login.smoobu.com';
+const isProd = process.env.NODE_ENV === 'production';
+const useMock = process.env.USE_MOCK === '1' || !process.env.SMOOBU_API_KEY;
+
 
 export async function GET() {
+  // Nunca servir mocks en producción:
+if (isProd && useMock) {
+  return new Response(
+    JSON.stringify({ ok: false, error: 'Server misconfigured: mocks disabled in production (missing SMOOBU_API_KEY or USE_MOCK=1)' }),
+    { status: 500 }
+  );
+}
+
+// Dev con mocks
+if (useMock) {
   if (!process.env.SMOOBU_API_KEY) {
     return Response.json({
       ok: true,
@@ -16,6 +29,9 @@ export async function GET() {
       },
     });
   }
+}
+
+ 
 
   const res = await fetch(`${BASE}/api/apartments`, {
     headers: { 'Api-Key': process.env.SMOOBU_API_KEY! },

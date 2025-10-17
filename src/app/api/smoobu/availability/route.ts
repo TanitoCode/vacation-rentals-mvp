@@ -1,8 +1,11 @@
 export const dynamic = 'force-dynamic';
 
 const BASE = 'https://login.smoobu.com';
-const IDS = ['2113656', '2254116', '2646938']; // usa tus IDs reales
+const IDS = ['2113656', '2254116', '2646938']; // tus IDs reales
 const CUSTOMER_ID = (process.env.SMOOBU_CUSTOMER_ID || '').trim();
+
+const isProd = process.env.NODE_ENV === 'production';
+const useMock = process.env.USE_MOCK === '1'; // <-- control explícito
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -10,8 +13,16 @@ export async function GET(req: Request) {
   const end    = searchParams.get('end')    || '2025-11-05';
   const guests = Number(searchParams.get('guests') || '2');
 
-  // MOCK si no hay key (para dev)
-  if (!process.env.SMOOBU_API_KEY) {
+  // 1) Nunca mocks en producción
+  if (isProd && useMock) {
+    return new Response(
+      JSON.stringify({ ok:false, error:'Mocks deshabilitados en producción (USE_MOCK=1)' }),
+      { status: 500 }
+    );
+  }
+
+  // 2) Dev con mocks (si USE_MOCK=1)
+  if (useMock) {
     return Response.json({
       ok: true,
       mock: true,
@@ -27,11 +38,20 @@ export async function GET(req: Request) {
     });
   }
 
+  // 3) Real (USE_MOCK=0) — requiere API key y customerId
+  if (!process.env.SMOOBU_API_KEY) {
+    return new Response(
+      JSON.stringify({ ok:false, error:'SMOOBU_API_KEY missing' }),
+      { status: 500 }
+    );
+  }
   if (!CUSTOMER_ID) {
-    return new Response(JSON.stringify({ ok:false, status:400, body:'SMOOBU_CUSTOMER_ID is missing' }), { status: 400 });
+    return new Response(
+      JSON.stringify({ ok:false, error:'SMOOBU_CUSTOMER_ID missing' }),
+      { status: 500 }
+    );
   }
 
-  // Llamada REAL
   const body = {
     arrivalDate: start,
     departureDate: end,
@@ -55,13 +75,12 @@ export async function GET(req: Request) {
     return new Response(JSON.stringify({ ok:false, status:res.status, body:txt }), { status: res.status });
   }
 
-  // Normalización al formato de nuestro front
+  // Normalización a { currency, quotes[] }
   const raw = await res.json() as any;
   const availableIds = new Set((raw?.availableApartments || []).map((x: any) => String(x)));
   let currency = 'USD';
 
   const quotes = Object.entries(raw?.prices || {}).map(([id, info]: any) => {
-    // currency: intenta sacar currencyCode de priceElements; si no, toma el símbolo o deja USD
     if (info?.priceElements?.[0]?.currencyCode) {
       currency = info.priceElements[0].currencyCode;
     }
@@ -73,5 +92,5 @@ export async function GET(req: Request) {
     };
   });
 
-  return Response.json({ ok: true, mock: false, data: { currency, quotes } });
+  return Response.json({ ok:true, mock:false, data:{ currency, quotes } });
 }

@@ -3,8 +3,21 @@ export const dynamic = 'force-dynamic'; // sin caché en dev
 const BASE = 'https://login.smoobu.com';
 // Reemplazá por 2–3 IDs reales tuyos (los ves en Avanzado → API Keys → Propiedades)
 const IDS = ['2113656', '2254116', '2646938'];
+const isProd = process.env.NODE_ENV === 'production';
+const useMock = process.env.USE_MOCK === '1' || !process.env.SMOOBU_API_KEY;
 
 export async function GET(request: Request) {
+
+  // Nunca servir mocks en producción:
+if (isProd && useMock) {
+  return new Response(
+    JSON.stringify({ ok: false, error: 'Server misconfigured: mocks disabled in production (missing SMOOBU_API_KEY or USE_MOCK=1)' }),
+    { status: 500 }
+  );
+}
+
+// Dev con mocks
+if (useMock) {
   // Si todavía no hay API key, devolvemos MOCK para no frenar
   if (!process.env.SMOOBU_API_KEY) {
     return Response.json({
@@ -27,6 +40,9 @@ export async function GET(request: Request) {
       }
     });
   }
+}
+
+  
 
   // Cuando tengas 2FA y pongas SMOOBU_API_KEY en .env.local, esta parte hará la llamada real:
   const { searchParams } = new URL(request.url);
