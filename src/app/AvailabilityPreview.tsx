@@ -22,6 +22,19 @@ function nightsBetween(start: string, end: string) {
   return Math.max(1, diffDays || 0);
 }
 
+function buildBookingUrl(base: string, apartmentId: string, start: string, end: string) {
+  const u = new URL(base);                 // p.ej. https://booking.smoobu.com/ARVACATIONS
+  u.searchParams.set('apartmentId', apartmentId);
+  // Best-effort: muchas instancias lo ignoran, pero no rompe nada.
+  u.searchParams.set('arrival', start);    // YYYY-MM-DD
+  u.searchParams.set('departure', end);    // YYYY-MM-DD
+  // Si quisieras probar alternativas sin romper nada:
+  // u.searchParams.set('checkin', start);
+  // u.searchParams.set('checkout', end);
+  // u.searchParams.set('adults', String(guests)); // si tuviéramos guests
+  return u.toString();
+}
+
 export default function AvailabilityPreview({ bookingBase }: { bookingBase: string }) {
   const [start, setStart] = useState('2025-11-01');
   const [end, setEnd] = useState('2025-11-05');
@@ -103,31 +116,35 @@ export default function AvailabilityPreview({ bookingBase }: { bookingBase: stri
       {quotes.length > 0 && (
         <div className="mt-4">
           <h3 className="font-medium mb-2">Disponibles ({available.length})</h3>
-          <ul className="space-y-2">
-            {availableSorted.map((q) => (
-              <li key={q.apartmentId} className="rounded border p-3">
-                <div className="font-semibold">{names[q.apartmentId] ?? `Propiedad ${q.apartmentId}`}</div>
-                <div className="text-sm text-slate-600">ID: {q.apartmentId}</div>
-                <div className="mt-1">Total: <strong>{fmt(q.total, currency)}</strong></div>
-                <div className="text-sm text-slate-600">
-                  Estadía: {nights} {nights === 1 ? 'noche' : 'noches'}
-                </div>
-                <div className="mt-1">
-                  Promedio/noche: <strong>{fmt(q.total / nights, currency)}</strong>
-                </div>
+        
+         <ul className="space-y-2">
+  {availableSorted.map((q) => {
 
 
-                <a
-                  href={`${bookingBase}?apartmentId=${q.apartmentId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-2 inline-flex items-center rounded-lg bg-blue-600 px-3 py-1.5 text-white hover:bg-blue-700"
-                >
-                  Reservar en Smoobu
-                </a>
-              </li>
-            ))}
-          </ul>
+
+    return (
+      <li key={q.apartmentId} className="rounded border p-3">
+        <div className="font-semibold">{names[q.apartmentId] ?? `Propiedad ${q.apartmentId}`}</div>
+        <div className="text-sm text-slate-600">ID: {q.apartmentId}</div>
+
+        <div className="mt-1">Total: <strong>{fmt(q.total, currency)}</strong></div>
+        <div className="text-sm text-slate-600">
+          Estadía: {nights} {nights === 1 ? 'noche' : 'noches'}
+        </div>
+        <div className="mt-1">Promedio/noche: <strong>{fmt(q.total / nights, currency)}</strong></div>
+
+        <a
+          href={buildBookingUrl(bookingBase, q.apartmentId, start, end)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-2 inline-flex items-center rounded-lg bg-blue-600 px-3 py-1.5 text-white hover:bg-blue-700"
+        >
+          Reservar en Smoobu
+        </a>
+      </li>
+    );
+  })}
+</ul>
         </div>
       )}
     </section>
