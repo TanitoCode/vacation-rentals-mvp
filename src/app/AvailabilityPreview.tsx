@@ -14,6 +14,14 @@ function fmt(amount: number, currency: string) {
   }
 }
 
+function nightsBetween(start: string, end: string) {
+  // Smoobu usa arrival/departure → noches = días entre las fechas
+  const s = new Date(start + 'T00:00:00');
+  const e = new Date(end + 'T00:00:00');
+  const diffDays = Math.round((e.getTime() - s.getTime()) / 86_400_000);
+  return Math.max(1, diffDays || 0);
+}
+
 export default function AvailabilityPreview({ bookingBase }: { bookingBase: string }) {
   const [start, setStart] = useState('2025-11-01');
   const [end, setEnd] = useState('2025-11-05');
@@ -54,13 +62,13 @@ export default function AvailabilityPreview({ bookingBase }: { bookingBase: stri
     }
   }
 
-// listas derivadas
-const available = quotes.filter(q => q.available);
-const availableSorted = available.slice().sort(
-  (a, b) => (a.total - b.total) || a.apartmentId.localeCompare(b.apartmentId)
-);
+  // listas derivadas
+  const available = quotes.filter(q => q.available);
+  const availableSorted = available.slice().sort(
+    (a, b) => (a.total - b.total) || a.apartmentId.localeCompare(b.apartmentId)
+  );
 
-
+  const nights = nightsBetween(start, end);
 
   return (
     <section className="mt-10">
@@ -101,6 +109,13 @@ const availableSorted = available.slice().sort(
                 <div className="font-semibold">{names[q.apartmentId] ?? `Propiedad ${q.apartmentId}`}</div>
                 <div className="text-sm text-slate-600">ID: {q.apartmentId}</div>
                 <div className="mt-1">Total: <strong>{fmt(q.total, currency)}</strong></div>
+                <div className="text-sm text-slate-600">
+                  Estadía: {nights} {nights === 1 ? 'noche' : 'noches'}
+                </div>
+                <div className="mt-1">
+                  Promedio/noche: <strong>{fmt(q.total / nights, currency)}</strong>
+                </div>
+
 
                 <a
                   href={`${bookingBase}?apartmentId=${q.apartmentId}`}
