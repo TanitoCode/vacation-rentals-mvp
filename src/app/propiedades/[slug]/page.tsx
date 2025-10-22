@@ -66,6 +66,48 @@ export default async function Page({
     <main className="mx-auto max-w-4xl p-6">
       <h1 className="text-2xl font-bold mb-4">{name}</h1>
 
+    {/* Filtro local: fechas y huéspedes (recarga por GET y mantiene el deep-link) */}
+<form method="get" className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-4">
+  <div>
+    <label className="block text-sm text-slate-400 mb-1" htmlFor="start">Desde</label>
+    <input
+      id="start"
+      name="start"
+      type="date"
+      defaultValue={start}
+      className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2"
+    />
+  </div>
+  <div>
+    <label className="block text-sm text-slate-400 mb-1" htmlFor="end">Hasta</label>
+    <input
+      id="end"
+      name="end"
+      type="date"
+      defaultValue={end}
+      className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2"
+    />
+  </div>
+  <div>
+    <label className="block text-sm text-slate-400 mb-1" htmlFor="guests">Huéspedes</label>
+    <input
+      id="guests"
+      name="guests"
+      type="number"
+      min={1}
+      defaultValue={(searchParams?.guests as string) || '2'}
+      className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2"
+    />
+  </div>
+  <div className="flex items-end">
+    <button
+      type="submit"
+      className="w-full rounded bg-slate-700 px-4 py-2 text-white hover:bg-slate-600"
+    >
+      Aplicar
+    </button>
+  </div>
+</form>
       {/* Imagen de portada si existe, si no un placeholder */}
       {prop.images?.[0] ? (
         <img
