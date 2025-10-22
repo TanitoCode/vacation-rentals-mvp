@@ -12,13 +12,21 @@ function parseIdsFromEnv(): string[] {
     .filter(Boolean);
 }
 
+function parseIdsFromQuery(searchParams: URLSearchParams): string[] {
+  const raw = searchParams.get('ids') || '';
+  return raw
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
+}
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const start  = searchParams.get('start')  || '2025-11-01';
   const end    = searchParams.get('end')    || '2025-11-05';
   const guests = Number(searchParams.get('guests') || '2');
 
-  // Nunca mocks en producción por seguridad
+  // Nunca mocks en producción
   if (isProd && useMock) {
     return new Response(
       JSON.stringify({ ok:false, error:'Mocks deshabilitados en producción (USE_MOCK=1)' }),
@@ -26,41 +34,35 @@ export async function GET(req: Request) {
     );
   }
 
-  // DEV con mocks
+  // DEV mock
   if (useMock) {
-    return Response.json({
-      ok: true,
-      mock: true,
-      data: {
-        currency: 'USD',
-        quotes: [
-          { unitId: '2113656', available: true,  total: 250 },
-          { unitId: '2254116', available: false, total: 0   },
-          { unitId: '2646938', available: true,  total: 150 }
-        ].map(q => ({ apartmentId: q.unitId, available: q.available, total: q.total })), // compat
-        params: { start, end, guests }
-      }
-    });
+    const mockQuotes = [
+      { unitId: '2113656', available: true,  total: 250 },
+      { unitId: '2254116', available: false, total: 0   },
+      { unitId: '2646938', available: true,  total: 150 }
+    ];
+    const ids = parseIdsFromQuery(searchParams);
+    const filtered = ids.length ? mockQuotes.filter(q => ids.includes(q.unitId)) : mockQuotes;
+    const quotes = filtered.map(q => ({ apartmentId: q.unitId, available: q.available, total: q.total }));
+    return Response.json({ ok: true, mock: true, data: { currency: 'USD', quotes, params: { start, end, guests } } });
   }
 
   // REAL vía provider
   const pms = getProvider();
 
-  // 1) Si hay lista en ENV, úsala; si no, traemos todas las unidades del PMS
-  let unitIds = parseIdsFromEnv();
+  // Prioridad: ids? -> env? -> todas
+  let unitIds = parseIdsFromQuery(searchParams);
+  if (unitIds.length === 0) unitIds = parseIdsFromEnv();
   if (unitIds.length === 0) {
     const units = await pms.listUnits();
     unitIds = units.map(u => u.id);
   }
 
-  // 2) Consultamos disponibilidad al PMS y devolvemos con el mismo contrato
   const avail = await pms.availability({ start, end, guests, unitIds });
-  // `avail.quotes` trae { unitId, available, total }; tu UI espera `apartmentId`
   const quotes = avail.quotes.map(q => ({
     apartmentId: q.unitId,
     available: q.available,
     total: q.total,
   }));
-
   return Response.json({ ok: true, mock: false, data: { currency: avail.currency, quotes } });
 }
