@@ -9,8 +9,15 @@
       "capacity": 4,
       "bedrooms": 2,
       "bathrooms": 1,
-      "images": [],
-      "pms": { "smoobu": { "apartmentId": "2113656" } }
+      "images": [
+        "https://images.unsplash.com/photo-1505691723518-36a5ac3b2d51?q=80&w=1600&auto=format&fit=crop",
+        "https://images.unsplash.com/photo-1501183638710-841dd1904471?q=80&w=1600&auto=format&fit=crop"
+      ],
+      "pms": {
+        "smoobu": {
+          "apartmentId": "2113656"
+        }
+      }
     },
     {
       "id": "aldea-121",
@@ -22,7 +29,11 @@
       "bedrooms": 2,
       "bathrooms": 2,
       "images": [],
-      "pms": { "smoobu": { "apartmentId": "2646938" } }
+      "pms": {
+        "smoobu": {
+          "apartmentId": "2646938"
+        }
+      }
     }
   ]
 }

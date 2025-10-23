@@ -2,6 +2,8 @@
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import Gallery from '@/components/Gallery';
+
 
 type CatalogProperty = {
   id: string;
@@ -35,7 +37,7 @@ function buildBookingUrl(base: string, apartmentId: string, start?: string, end?
   const u = new URL(base);
   u.searchParams.set('apartmentId', apartmentId);
   if (start) u.searchParams.set('arrival', start);   // best-effort
-  if (end)   u.searchParams.set('departure', end);
+  if (end) u.searchParams.set('departure', end);
   return u.toString();
 }
 
@@ -90,14 +92,14 @@ export default async function Page(
   const aptId = prop.pms?.smoobu?.apartmentId ?? undefined;
 
   // Filtros desde la URL (ya resueltos)
-  const start  = (sp.start  as string) ?? undefined;
-  const end    = (sp.end    as string) ?? undefined;
+  const start = (sp.start as string) ?? undefined;
+  const end = (sp.end as string) ?? undefined;
   const guests = Number((sp.guests as string) ?? '2');
 
   // Chequeo de disponibilidad para esta unidad (si hay fechas)
   const unitQuote = aptId ? await getUnitAvailability(aptId, start, end, guests) : null;
-  const hasDates  = !!(start && end);
-  const isAvail   = unitQuote ? !!unitQuote.available : undefined;
+  const hasDates = !!(start && end);
+  const isAvail = unitQuote ? !!unitQuote.available : undefined;
 
   const reservarHref = aptId
     ? buildBookingUrl(bookingBase, aptId, start, end)
@@ -117,17 +119,17 @@ export default async function Page(
         <div>
           <label className="block text-sm text-slate-400 mb-1" htmlFor="start">Desde</label>
           <input id="start" name="start" type="date" defaultValue={start}
-                 className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2" />
+            className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2" />
         </div>
         <div>
           <label className="block text-sm text-slate-400 mb-1" htmlFor="end">Hasta</label>
           <input id="end" name="end" type="date" defaultValue={end}
-                 className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2" />
+            className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2" />
         </div>
         <div>
           <label className="block text-sm text-slate-400 mb-1" htmlFor="guests">Huéspedes</label>
           <input id="guests" name="guests" type="number" min={1} defaultValue={String(guests)}
-                 className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2" />
+            className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2" />
         </div>
         <div className="flex items-end">
           <button type="submit" className="w-full rounded bg-slate-700 px-4 py-2 text-white hover:bg-slate-600">
@@ -162,12 +164,13 @@ export default async function Page(
         </div>
       )}
 
-      {/* Imagen de portada o placeholder */}
-      {prop.images?.[0] ? (
-        <img src={prop.images[0]} alt={name} className="mb-4 aspect-video w-full rounded object-cover" />
+      {/* Galería si hay imágenes; si no, placeholder */}
+      {(prop.images?.length ?? 0) > 0 ? (
+        <Gallery images={prop.images!} name={name} />
       ) : (
         <div className="mb-4 aspect-video w-full rounded bg-slate-800/30" />
       )}
+
 
       <div className="grid gap-4 sm:grid-cols-2">
         <section>
@@ -179,8 +182,8 @@ export default async function Page(
           <h2 className="font-semibold mb-2">Detalles</h2>
           <ul className="text-slate-300 space-y-1">
             <li><span className="text-slate-400">ID:</span> {prop.id}</li>
-            {prop.capacity  !== undefined && <li><span className="text-slate-400">Capacidad:</span> {prop.capacity}</li>}
-            {prop.bedrooms  !== undefined && <li><span className="text-slate-400">Dormitorios:</span> {prop.bedrooms}</li>}
+            {prop.capacity !== undefined && <li><span className="text-slate-400">Capacidad:</span> {prop.capacity}</li>}
+            {prop.bedrooms !== undefined && <li><span className="text-slate-400">Dormitorios:</span> {prop.bedrooms}</li>}
             {prop.bathrooms !== undefined && <li><span className="text-slate-400">Baños:</span> {prop.bathrooms}</li>}
           </ul>
 
