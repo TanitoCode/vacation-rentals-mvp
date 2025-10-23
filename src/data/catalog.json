@@ -1,15 +1,28 @@
-[
-  {
-    "id": "aldea-104-2",
-    "name": "ALDEA 104 2",
-    "slug": "aldea-104-2",
-    "capacity": 4,
-    "bedrooms": 2,
-    "bathrooms": 1,
-    "location": { "lat": 20.62, "lng": -87.07 },
-    "images": [],
-    "description": "Depto cómodo cerca de la playa.",
-    "active": true,
-    "pms": { "smoobu": { "apartmentId": "2113656" } }
-  }
-]
+{
+  "properties": [
+    {
+      "id": "aldea-104-2",
+      "slug": "aldea-104-2",
+      "name": "ALDEA 104 2",
+      "active": true,
+      "description": "Depto cómodo cerca de la playa.",
+      "capacity": 4,
+      "bedrooms": 2,
+      "bathrooms": 1,
+      "images": [],
+      "pms": { "smoobu": { "apartmentId": "2113656" } }
+    },
+    {
+      "id": "aldea-121",
+      "slug": "aldea-121",
+      "name": "ALDEA 121",
+      "active": true,
+      "description": "Depto amplio con terraza.",
+      "capacity": 4,
+      "bedrooms": 2,
+      "bathrooms": 2,
+      "images": [],
+      "pms": { "smoobu": { "apartmentId": "2646938" } }
+    }
+  ]
+}
