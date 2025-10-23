@@ -7,9 +7,12 @@ export async function GET() {
   try {
     const file = path.join(process.cwd(), 'src', 'data', 'catalog.json');
     const raw = await readFile(file, 'utf-8');
-    const properties = JSON.parse(raw);
-    return Response.json({ ok: true, data: { properties } });
+    const catalog = JSON.parse(raw); // <- OJO: esto es { properties: [...] }
+    return Response.json({ ok: true, data: { properties: catalog.properties } }); // <- devolvemos el ARREGLO
   } catch (err: any) {
-    return new Response(JSON.stringify({ ok: false, error: err?.message || 'read error' }), { status: 500 });
+    return new Response(
+      JSON.stringify({ ok: false, error: err?.message || 'read error' }),
+      { status: 500 }
+    );
   }
 }

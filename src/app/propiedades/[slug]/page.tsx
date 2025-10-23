@@ -1,6 +1,7 @@
 // src/app/propiedades/[slug]/page.tsx
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
+import Link from 'next/link';
 
 type CatalogProperty = {
   id: string;
@@ -15,9 +16,10 @@ type CatalogProperty = {
   pms?: { smoobu?: { apartmentId?: string } };
 };
 
+// URL absoluta robusta para SSR
 async function absUrl(pathname: string) {
   const h = await headers();
-  const host  = h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000';
+  const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000';
   const proto = h.get('x-forwarded-proto') ?? 'http';
   return `${proto}://${host}${pathname}`;
 }
@@ -38,11 +40,11 @@ function buildBookingUrl(base: string, apartmentId: string, start?: string, end?
 }
 
 async function getUnitAvailability(aptId: string, start?: string, end?: string, guests?: number) {
-  // Sin fechas no consultamos (esto mantiene el “Selecciona fechas...”)
-  if (!start || !end) return null;
+  if (!start || !end) return null; // sin fechas no consultamos
 
   const qs = new URLSearchParams({
-    start, end,
+    start,
+    end,
     guests: String(guests ?? 2),
     ids: aptId, // pedimos SOLO esta unidad
   });
@@ -50,49 +52,47 @@ async function getUnitAvailability(aptId: string, start?: string, end?: string, 
   const url = await absUrl(`/api/smoobu/availability?${qs.toString()}`);
   const res = await fetch(url, { cache: 'no-store' });
 
-  // Si hay error de red/servidor, asumimos “no disponible” para no prometer algo que quizá no exista
   if (!res.ok) {
     return { apartmentId: aptId, available: false, total: 0 };
   }
 
   const json = await res.json();
   const quotes = Array.isArray(json?.data?.quotes) ? json.data.quotes : [];
-
-  // Si el endpoint respondió vacío o no vino el ID, tratamos como NO disponible
   if (quotes.length === 0) {
     return { apartmentId: aptId, available: false, total: 0 };
   }
 
   const q = quotes.find((x: any) => String(x.apartmentId) === String(aptId));
-  if (!q) {
-    return { apartmentId: aptId, available: false, total: 0 };
-  }
-
-  // { apartmentId, available, total }
-  return q;
+  return q ?? { apartmentId: aptId, available: false, total: 0 };
 }
 
-export default async function Page({
-  params,
-  searchParams,
-}: {
-  params: { slug: string };
-  searchParams?: { [key: string]: string | string[] | undefined };
-}) {
+export default async function Page(
+  props: {
+    // 👇 En Next 15, ambos llegan como Promesas
+    params: Promise<{ slug: string }>;
+    searchParams: Promise<Record<string, string | string[] | undefined>>;
+  }
+) {
+  // ✅ Esperamos ambas promesas ANTES de usarlas
+  const [{ slug }, sp] = await Promise.all([props.params, props.searchParams]);
+
   const catalog = await getCatalog();
   const prop =
-    catalog.find(p => p.slug === params.slug) ||
-    catalog.find(p => p.id === params.slug);
+    catalog.find((p) => p.slug === slug) ||
+    catalog.find((p) => p.id === slug);
 
   if (!prop || prop.active === false) notFound();
 
-  const name        = prop.name ?? prop.slug ?? prop.id;
-  const bookingBase = process.env.SMOOBU_BOOKING_EXTERNAL_URL || '#';
-  const aptId       = prop.pms?.smoobu?.apartmentId;
+  const activeCount = catalog.filter((p) => p.active !== false).length;
 
-  const start  = (searchParams?.start  as string) || undefined;
-  const end    = (searchParams?.end    as string) || undefined;
-  const guests = Number((searchParams?.guests as string) || '2');
+  const name = prop.name ?? prop.slug ?? prop.id;
+  const bookingBase = process.env.SMOOBU_BOOKING_EXTERNAL_URL || '#';
+  const aptId = prop.pms?.smoobu?.apartmentId ?? undefined;
+
+  // Filtros desde la URL (ya resueltos)
+  const start  = (sp.start  as string) ?? undefined;
+  const end    = (sp.end    as string) ?? undefined;
+  const guests = Number((sp.guests as string) ?? '2');
 
   // Chequeo de disponibilidad para esta unidad (si hay fechas)
   const unitQuote = aptId ? await getUnitAvailability(aptId, start, end, guests) : null;
@@ -103,6 +103,11 @@ export default async function Page({
     ? buildBookingUrl(bookingBase, aptId, start, end)
     : bookingBase;
 
+  // Link a la home con las mismas fechas para ver otras disponibles (solo si hay +1 activa)
+  const otherAvailableHref =
+    hasDates ? `/?start=${start}&end=${end}&guests=${guests}` : '/';
+  const showOtherBtn = activeCount > 1 && hasDates && isAvail === false;
+
   return (
     <main className="mx-auto max-w-4xl p-6">
       <h1 className="text-2xl font-bold mb-4">{name}</h1>
@@ -112,17 +117,17 @@ export default async function Page({
         <div>
           <label className="block text-sm text-slate-400 mb-1" htmlFor="start">Desde</label>
           <input id="start" name="start" type="date" defaultValue={start}
-            className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2" />
+                 className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2" />
         </div>
         <div>
           <label className="block text-sm text-slate-400 mb-1" htmlFor="end">Hasta</label>
           <input id="end" name="end" type="date" defaultValue={end}
-            className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2" />
+                 className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2" />
         </div>
         <div>
           <label className="block text-sm text-slate-400 mb-1" htmlFor="guests">Huéspedes</label>
           <input id="guests" name="guests" type="number" min={1} defaultValue={String(guests)}
-            className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2" />
+                 className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2" />
         </div>
         <div className="flex items-end">
           <button type="submit" className="w-full rounded bg-slate-700 px-4 py-2 text-white hover:bg-slate-600">
@@ -131,21 +136,31 @@ export default async function Page({
         </div>
       </form>
 
-      {/* Estado de disponibilidad (si hay fechas) */}
+      {/* Estado de disponibilidad + botón “Ver otras disponibles” cuando NO hay */}
       {hasDates && (
-  <div className="mb-3">
-    {isAvail === true && (
-      <span className="inline-block rounded bg-green-700/30 px-3 py-1 text-green-300">
-        Disponible para estas fechas
-      </span>
-    )}
-    {isAvail === false && (
-      <span className="inline-block rounded bg-red-700/30 px-3 py-1 text-red-300">
-        No disponible para estas fechas
-      </span>
-    )}
-  </div>
-)}
+        <div className="mb-3 flex items-center gap-3">
+          {isAvail === true && (
+            <span className="inline-block rounded bg-green-700/30 px-3 py-1 text-green-300">
+              Disponible para estas fechas
+            </span>
+          )}
+          {isAvail === false && (
+            <>
+              <span className="inline-block rounded bg-red-700/30 px-3 py-1 text-red-300">
+                No disponible para estas fechas
+              </span>
+              {showOtherBtn && (
+                <Link
+                  href={otherAvailableHref}
+                  className="inline-flex items-center rounded border border-slate-600 px-3 py-1 text-slate-100 hover:bg-slate-800"
+                >
+                  Ver otras disponibles
+                </Link>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       {/* Imagen de portada o placeholder */}
       {prop.images?.[0] ? (
@@ -169,25 +184,24 @@ export default async function Page({
             {prop.bathrooms !== undefined && <li><span className="text-slate-400">Baños:</span> {prop.bathrooms}</li>}
           </ul>
 
-          {/* Botón reservar (sin onClick en Server Components) */}
-{isAvail === false ? (
-  <div
-    className="mt-4 inline-flex items-center rounded bg-slate-600 px-4 py-2 text-white opacity-50 cursor-not-allowed"
-    aria-disabled="true"
-  >
-    No disponible para estas fechas
-  </div>
-) : (
-  <a
-    href={reservarHref}
-    target="_blank"
-    rel="noopener noreferrer"
-    className="mt-4 inline-flex items-center rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-  >
-    Reservar en Smoobu
-  </a>
-)}
-
+          {/* Botón reservar (sin onClick, server component) */}
+          {isAvail === false ? (
+            <div
+              className="mt-4 inline-flex items-center rounded bg-slate-600 px-4 py-2 text-white opacity-50 cursor-not-allowed"
+              aria-disabled="true"
+            >
+              No disponible para estas fechas
+            </div>
+          ) : (
+            <a
+              href={reservarHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 inline-flex items-center rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+            >
+              Reservar en Smoobu
+            </a>
+          )}
         </section>
       </div>
     </main>
