@@ -60,6 +60,38 @@ function buildMapsLink(loc?: CatalogProperty['location']) {
   return q ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}` : null;
 }
 
+function buildMapsEmbedUrl(loc?: CatalogProperty['location']) {
+  if (!loc) return null;
+
+  // Prioridad 1: coordenadas (más precisas y estables)
+  if (typeof loc.lat === 'number' && typeof loc.lng === 'number') {
+    // z=16 es un zoom urbano cómodo; podés ajustar
+    return `https://www.google.com/maps?q=${loc.lat},${loc.lng}&z=16&output=embed`;
+  }
+
+  // Prioridad 2: address/city/country (si no hay lat/lng)
+  const q = [loc.address, loc.city, loc.country].filter(Boolean).join(', ');
+  if (q) {
+    return `https://www.google.com/maps?q=${encodeURIComponent(q)}&z=16&output=embed`;
+  }
+
+  // Si solo tenés mapsUrl (deep link), usamos el link normal (no siempre es "embed friendly")
+  if (loc.mapsUrl) {
+    // fallback básico: buscamos query en mapsUrl; si no, usamos tal cual
+    try {
+      const u = new URL(loc.mapsUrl);
+      const query = u.searchParams.get('q') || u.pathname.replace(/^\/+/, '');
+      if (query) return `https://www.google.com/maps?q=${encodeURIComponent(query)}&z=16&output=embed`;
+    } catch {
+      /* ignore */
+    }
+    return null;
+  }
+
+  return null;
+}
+
+
 
 async function getUnitAvailability(aptId: string, start?: string, end?: string, guests?: number) {
   if (!start || !end) return null; // sin fechas no consultamos
@@ -109,6 +141,7 @@ export default async function Page(
 
   const name = prop.name ?? prop.slug ?? prop.id;
   const mapsHref = buildMapsLink(prop.location);
+  const mapsEmbed = buildMapsEmbedUrl(prop.location);
 
   const bookingBase = process.env.SMOOBU_BOOKING_EXTERNAL_URL || '#';
   const aptId = prop.pms?.smoobu?.apartmentId ?? undefined;
@@ -254,6 +287,35 @@ export default async function Page(
             )}
           </ul>
 
+          {/* Mapa embebido (si hay datos suficientes) */}
+          {mapsEmbed && (
+            <section className="mt-6">
+              <h2 className="font-semibold mb-2">Mapa</h2>
+              <div className="aspect-video w-full overflow-hidden rounded border border-slate-700">
+                <iframe
+                  src={mapsEmbed}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  allowFullScreen
+                  className="h-full w-full"
+                  title={`Mapa de ${name}`}
+                />
+              </div>
+              {mapsHref && !mapsEmbed && (
+                <li className="mt-2">
+                  <a
+                    href={mapsHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center rounded border border-slate-600 px-3 py-1 hover:bg-slate-800"
+                  >
+                    Ver en Google Maps
+                  </a>
+                </li>
+              )}
+            </section>
+          )}
+
           {/* Botón reservar (sin onClick, server component) */}
           {isAvail === false ? (
             <div
@@ -273,6 +335,8 @@ export default async function Page(
             </a>
           )}
         </section>
+
+
       </div>
     </main>
   );
