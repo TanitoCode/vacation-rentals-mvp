@@ -233,108 +233,95 @@ export default async function Page(
           <p className="text-slate-300">{prop.description ?? 'Sin descripción por ahora.'}</p>
         </section>
 
-        <section>
-          <h2 className="font-semibold mb-2">Detalles</h2>
-          <ul className="text-slate-300 space-y-1">
-            <li><span className="text-slate-400">ID:</span> {prop.id}</li>
-            {prop.capacity !== undefined && <li><span className="text-slate-400">Capacidad:</span> {prop.capacity}</li>}
-            {prop.bedrooms !== undefined && <li><span className="text-slate-400">Dormitorios:</span> {prop.bedrooms}</li>}
-            {prop.bathrooms !== undefined && <li><span className="text-slate-400">Baños:</span> {prop.bathrooms}</li>}
-            {(prop.location?.address || prop.location?.city || prop.location?.country) && (
-              <li>
-                <span className="text-slate-400">Ubicación:</span>{' '}
-                {[
-                  prop.location?.address,
-                  prop.location?.city,
-                  prop.location?.country
-                ].filter(Boolean).join(', ')}
-              </li>
-            )}
+<section>
+  <h2 className="font-semibold mb-2">Detalles</h2>
 
-            {mapsHref && (
-              <li className="mt-2">
-                <a
-                  href={mapsHref}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center rounded border border-slate-600 px-3 py-1 hover:bg-slate-800"
-                >
-                  Ver en Google Maps{(prop.location?.address || prop.location?.city || prop.location?.country) && (
-                    <li>
-                      <span className="text-slate-400">Ubicación:</span>{' '}
-                      {[
-                        prop.location?.address,
-                        prop.location?.city,
-                        prop.location?.country
-                      ].filter(Boolean).join(', ')}
-                    </li>
-                  )}
+  <ul className="text-slate-300 space-y-1">
+    <li><span className="text-slate-400">ID:</span> {prop.id}</li>
+    {prop.capacity  !== undefined && (
+      <li><span className="text-slate-400">Capacidad:</span> {prop.capacity}</li>
+    )}
+    {prop.bedrooms  !== undefined && (
+      <li><span className="text-slate-400">Dormitorios:</span> {prop.bedrooms}</li>
+    )}
+    {prop.bathrooms !== undefined && (
+      <li><span className="text-slate-400">Baños:</span> {prop.bathrooms}</li>
+    )}
 
-                  {mapsHref && (
-                    <li className="mt-2">
-                      <a
-                        href={mapsHref}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center rounded border border-slate-600 px-3 py-1 hover:bg-slate-800"
-                      >
-                        Ver en Google Maps
-                      </a>
-                    </li>
-                  )}
-                </a>
-              </li>
-            )}
-          </ul>
+    {(prop.location?.address || prop.location?.city || prop.location?.country) && (
+      <li>
+        <span className="text-slate-400">Ubicación:</span>{' '}
+        {[
+          prop.location?.address,
+          prop.location?.city,
+          prop.location?.country
+        ].filter(Boolean).join(', ')}
+      </li>
+    )}
 
-          {/* Mapa embebido (si hay datos suficientes) */}
-          {mapsEmbed && (
-            <section className="mt-6">
-              <h2 className="font-semibold mb-2">Mapa</h2>
-              <div className="aspect-video w-full overflow-hidden rounded border border-slate-700">
-                <iframe
-                  src={mapsEmbed}
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                  allowFullScreen
-                  className="h-full w-full"
-                  title={`Mapa de ${name}`}
-                />
-              </div>
-              {mapsHref && !mapsEmbed && (
-                <li className="mt-2">
-                  <a
-                    href={mapsHref}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center rounded border border-slate-600 px-3 py-1 hover:bg-slate-800"
-                  >
-                    Ver en Google Maps
-                  </a>
-                </li>
-              )}
-            </section>
-          )}
+    {/* Mostrar el botón AQUÍ solo si NO hay iframe (para no duplicar) */}
+    {mapsHref && !mapsEmbed && (
+      <li className="mt-2">
+        <a
+          href={mapsHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center rounded border border-slate-600 px-3 py-1 hover:bg-slate-800"
+        >
+          Ver en Google Maps
+        </a>
+      </li>
+    )}
+  </ul>
 
-          {/* Botón reservar (sin onClick, server component) */}
-          {isAvail === false ? (
-            <div
-              className="mt-4 inline-flex items-center rounded bg-slate-600 px-4 py-2 text-white opacity-50 cursor-not-allowed"
-              aria-disabled="true"
-            >
-              No disponible para estas fechas
-            </div>
-          ) : (
-            <a
-              href={reservarHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-4 inline-flex items-center rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-            >
-              Reservar en Smoobu
-            </a>
-          )}
-        </section>
+  {/* Botón reservar (sin onClick; es Server Component) */}
+  {isAvail === false ? (
+    <div
+      className="mt-4 inline-flex items-center rounded bg-slate-600 px-4 py-2 text-white opacity-50 cursor-not-allowed"
+      aria-disabled="true"
+    >
+      No disponible para estas fechas
+    </div>
+  ) : (
+    <a
+      href={reservarHref}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="mt-4 inline-flex items-center rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+    >
+      Reservar en Smoobu
+    </a>
+  )}
+</section>
+
+{mapsEmbed && (
+  <section className="mt-6">
+    <h2 className="font-semibold mb-2">Mapa</h2>
+    <div className="aspect-video w-full overflow-hidden rounded border border-slate-700">
+      <iframe
+        src={mapsEmbed}
+        loading="lazy"
+        referrerPolicy="no-referrer-when-downgrade"
+        allowFullScreen
+        className="h-full w-full"
+        title={`Mapa de ${name}`}
+      />
+    </div>
+    {mapsHref && (
+      <div className="mt-2">
+        <a
+          href={mapsHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center rounded border border-slate-600 px-3 py-1 hover:bg-slate-800"
+        >
+          Ver en Google Maps
+        </a>
+      </div>
+    )}
+  </section>
+)}
+
 
 
       </div>
