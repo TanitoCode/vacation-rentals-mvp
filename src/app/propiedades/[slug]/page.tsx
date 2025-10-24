@@ -294,6 +294,7 @@ export default async function Page(
   )}
 </section>
 
+  </div>
 {mapsEmbed && (
   <section className="mt-6">
     <h2 className="font-semibold mb-2">Mapa</h2>
@@ -324,7 +325,8 @@ export default async function Page(
 
 
 
-      </div>
+
+    
     </main>
   );
 }
