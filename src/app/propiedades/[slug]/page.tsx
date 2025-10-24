@@ -16,6 +16,13 @@ type CatalogProperty = {
   bedrooms?: number;
   bathrooms?: number;
   pms?: { smoobu?: { apartmentId?: string } };
+  location?: {
+    lat?: number;
+    lng?: number;
+    address?: string;
+    city?: string;
+    country?: string;
+  };
 };
 
 // URL absoluta robusta para SSR
@@ -39,6 +46,15 @@ function buildBookingUrl(base: string, apartmentId: string, start?: string, end?
   if (start) u.searchParams.set('arrival', start);   // best-effort
   if (end) u.searchParams.set('departure', end);
   return u.toString();
+}
+
+function buildMapsLink(loc?: CatalogProperty['location']) {
+  if (!loc) return null;
+  if (typeof loc.lat === 'number' && typeof loc.lng === 'number') {
+    return `https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}`;
+  }
+  const q = [loc.address, loc.city, loc.country].filter(Boolean).join(', ');
+  return q ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}` : null;
 }
 
 async function getUnitAvailability(aptId: string, start?: string, end?: string, guests?: number) {
@@ -88,6 +104,8 @@ export default async function Page(
   const activeCount = catalog.filter((p) => p.active !== false).length;
 
   const name = prop.name ?? prop.slug ?? prop.id;
+  const mapsHref = buildMapsLink(prop.location);
+
   const bookingBase = process.env.SMOOBU_BOOKING_EXTERNAL_URL || '#';
   const aptId = prop.pms?.smoobu?.apartmentId ?? undefined;
 
@@ -185,6 +203,51 @@ export default async function Page(
             {prop.capacity !== undefined && <li><span className="text-slate-400">Capacidad:</span> {prop.capacity}</li>}
             {prop.bedrooms !== undefined && <li><span className="text-slate-400">Dormitorios:</span> {prop.bedrooms}</li>}
             {prop.bathrooms !== undefined && <li><span className="text-slate-400">Baños:</span> {prop.bathrooms}</li>}
+            {(prop.location?.address || prop.location?.city || prop.location?.country) && (
+              <li>
+                <span className="text-slate-400">Ubicación:</span>{' '}
+                {[
+                  prop.location?.address,
+                  prop.location?.city,
+                  prop.location?.country
+                ].filter(Boolean).join(', ')}
+              </li>
+            )}
+
+            {mapsHref && (
+              <li className="mt-2">
+                <a
+                  href={mapsHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center rounded border border-slate-600 px-3 py-1 hover:bg-slate-800"
+                >
+                  Ver en Google Maps{(prop.location?.address || prop.location?.city || prop.location?.country) && (
+                    <li>
+                      <span className="text-slate-400">Ubicación:</span>{' '}
+                      {[
+                        prop.location?.address,
+                        prop.location?.city,
+                        prop.location?.country
+                      ].filter(Boolean).join(', ')}
+                    </li>
+                  )}
+
+                  {mapsHref && (
+                    <li className="mt-2">
+                      <a
+                        href={mapsHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center rounded border border-slate-600 px-3 py-1 hover:bg-slate-800"
+                      >
+                        Ver en Google Maps
+                      </a>
+                    </li>
+                  )}
+                </a>
+              </li>
+            )}
           </ul>
 
           {/* Botón reservar (sin onClick, server component) */}

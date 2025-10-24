@@ -9,14 +9,14 @@
       "capacity": 4,
       "bedrooms": 2,
       "bathrooms": 1,
-      "images": [
-        "https://images.unsplash.com/photo-1501183638710-841dd1904471?q=80&w=1600&auto=format&fit=crop",
-        "https://images.homify.com/v1512601972/p/photo/image/2350734/DSC_0453-Editar-Editar.jpg"
-      ],
-      "pms": {
-        "smoobu": {
-          "apartmentId": "2113656"
-        }
+      "images": [],
+      "pms": { "smoobu": { "apartmentId": "2113656" } },
+      "location": {
+        "lat": 20.6275,
+        "lng": -87.0739,
+        "address": "C. Cozumel Mz 81-Lt 1, Gonzalo Guerrero, 77710 ",
+        "city": "Playa del Carmen",
+        "country": "México"
       }
     },
     {
@@ -29,10 +29,13 @@
       "bedrooms": 2,
       "bathrooms": 2,
       "images": [],
-      "pms": {
-        "smoobu": {
-          "apartmentId": "2646938"
-        }
+      "pms": { "smoobu": { "apartmentId": "2646938" } },
+      "location": {
+        "lat": 20.6278,
+        "lng": -87.0742,
+        "address": "C. Cozumel Mz 81-Lt 1, Gonzalo Guerrero, 77710",
+        "city": "Playa del Carmen",
+        "country": "México"
       }
     }
   ]
