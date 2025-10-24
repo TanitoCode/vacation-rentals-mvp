@@ -22,8 +22,10 @@ type CatalogProperty = {
     address?: string;
     city?: string;
     country?: string;
+    mapsUrl?: string; // <--- NUEVO
   };
 };
+
 
 // URL absoluta robusta para SSR
 async function absUrl(pathname: string) {
@@ -50,12 +52,14 @@ function buildBookingUrl(base: string, apartmentId: string, start?: string, end?
 
 function buildMapsLink(loc?: CatalogProperty['location']) {
   if (!loc) return null;
+  if (loc.mapsUrl) return loc.mapsUrl; // <--- PRIORIDAD: si viene el link, lo usamos
   if (typeof loc.lat === 'number' && typeof loc.lng === 'number') {
     return `https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}`;
   }
   const q = [loc.address, loc.city, loc.country].filter(Boolean).join(', ');
   return q ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}` : null;
 }
+
 
 async function getUnitAvailability(aptId: string, start?: string, end?: string, guests?: number) {
   if (!start || !end) return null; // sin fechas no consultamos

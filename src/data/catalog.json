@@ -9,14 +9,13 @@
       "capacity": 4,
       "bedrooms": 2,
       "bathrooms": 1,
-      "images": [],
+      "images": ["https://instrucciones-ar-vacations.netlify.app/assets/frenteAldeaThai.jpeg"],
       "pms": { "smoobu": { "apartmentId": "2113656" } },
       "location": {
-        "lat": 20.6275,
-        "lng": -87.0739,
-        "address": "C. Cozumel Mz 81-Lt 1, Gonzalo Guerrero, 77710 ",
-        "city": "Playa del Carmen",
-        "country": "México"
+        "address": "C. Cozumel Mz 81-Lt 1, Gonzalo Guerrero, 77710 Playa del Carmen",
+        "city": "Quintana Roo",
+        "country": "México",
+        "mapsUrl": "https://maps.app.goo.gl/7wgKc3ZUfu67D7KA7"
       }
     },
     {
@@ -28,14 +27,13 @@
       "capacity": 4,
       "bedrooms": 2,
       "bathrooms": 2,
-      "images": [],
+      "images": ["https://instrucciones-ar-vacations.netlify.app/assets/frenteAldeaThai.jpeg"],
       "pms": { "smoobu": { "apartmentId": "2646938" } },
       "location": {
-        "lat": 20.6278,
-        "lng": -87.0742,
-        "address": "C. Cozumel Mz 81-Lt 1, Gonzalo Guerrero, 77710",
-        "city": "Playa del Carmen",
-        "country": "México"
+        "address": "C. Cozumel Mz 81-Lt 1, Gonzalo Guerrero, 77710 Playa del Carmen",
+        "city": "Quintana Roo",
+        "country": "México",
+        "mapsUrl": "https://maps.app.goo.gl/7wgKc3ZUfu67D7KA7"
       }
     }
   ]
