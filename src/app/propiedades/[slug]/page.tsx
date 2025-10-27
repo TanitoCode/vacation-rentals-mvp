@@ -170,6 +170,39 @@ async function getUnitAvailability(aptId: string, start?: string, end?: string, 
   return q ?? { apartmentId: aptId, available: false, total: 0 };
 }
 
+function PropertyJsonLd({ prop, url }: { prop: any; url: string }) {
+  const address = prop.location || {};
+  const images = Array.isArray(prop.images) ? prop.images : [];
+
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Apartment',
+    name: prop.name || prop.slug || prop.id,
+    url,
+    description: prop.description || undefined,
+    image: images.length ? images : undefined,
+    numberOfRooms: prop.bedrooms || undefined,
+    occupancy: prop.capacity ? { '@type': 'QuantitativeValue', value: prop.capacity } : undefined,
+    address: (address.address || address.city || address.country)
+      ? {
+          '@type': 'PostalAddress',
+          streetAddress: address.address || undefined,
+          addressLocality: address.city || undefined,
+          addressCountry: address.country || 'MX',
+        }
+      : undefined,
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+    />
+  );
+}
+
+
+
 export default async function Page(
   props: {
     // 👇 En Next 15, ambos llegan como Promesas
@@ -214,11 +247,13 @@ export default async function Page(
   const otherAvailableHref =
     hasDates ? `/?start=${start}&end=${end}&guests=${guests}` : '/';
   const showOtherBtn = activeCount > 1 && hasDates && isAvail === false;
+  const canonical =
+  `${process.env.SITE_URL || 'http://localhost:3000'}/propiedades/${prop.slug || prop.id}`;
 
   return (
     <main className="mx-auto max-w-4xl p-6">
       <h1 className="text-2xl font-bold mb-4">{name}</h1>
-
+ <PropertyJsonLd prop={prop} url={canonical} />   {/* ← AQUÍ, debajo del H1 */}
       {/* Filtro local: fechas y huéspedes */}
       <form method="get" className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-4">
         <div>
