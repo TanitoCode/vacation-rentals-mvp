@@ -1,9 +1,59 @@
 // src/app/propiedades/[slug]/page.tsx
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
+import type { Metadata } from 'next';
+import catalogJson from '@/data/catalog.json';
 import Link from 'next/link';
 import Gallery from '@/components/Gallery';
 
+// helper para base URL
+function siteUrl() {
+  return process.env.SITE_URL || 'http://localhost:3000';
+}
+
+export async function generateMetadata(
+  { params }: { params: Promise<{ slug: string }> }
+): Promise<Metadata> {
+  const { slug } = await params;
+
+  const catalog: any[] = (catalogJson as any).properties || [];
+  const prop =
+    catalog.find((p) => p.slug === slug) ||
+    catalog.find((p) => p.id === slug);
+
+  if (!prop) {
+    return {
+      title: 'Propiedad no encontrada · AR Vacations',
+      robots: { index: false, follow: false },
+    };
+  }
+
+  const name = prop.name || prop.slug || prop.id;
+  const desc =
+    prop.description ||
+    `Alojamiento en Playa del Carmen: ${name}. Reserva segura y disponibilidad al día.`;
+
+  const url = `${siteUrl()}/propiedades/${prop.slug || prop.id}`;
+
+  return {
+    title: `${name}`,
+    description: desc,
+    alternates: { canonical: url },
+    openGraph: {
+      type: 'article',
+      url,
+      title: name,
+      description: desc,
+      images: prop.images && prop.images.length ? prop.images : undefined,
+      siteName: 'AR Vacations',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: name,
+      description: desc,
+    },
+  };
+}
 
 type CatalogProperty = {
   id: string;
