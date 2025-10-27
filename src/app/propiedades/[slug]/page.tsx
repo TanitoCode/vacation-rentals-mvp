@@ -247,6 +247,9 @@ export default async function Page(
   const otherAvailableHref =
     hasDates ? `/?start=${start}&end=${end}&guests=${guests}` : '/';
   const showOtherBtn = activeCount > 1 && hasDates && isAvail === false;
+
+
+  
   const canonical =
   `${process.env.SITE_URL || 'http://localhost:3000'}/propiedades/${prop.slug || prop.id}`;
 
