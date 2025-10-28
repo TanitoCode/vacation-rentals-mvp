@@ -18,7 +18,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
 
   return [
-    { url: `${SITE}/`, lastModified: now },
+    { url: `${SITE}/`, lastModified: now, changeFrequency: 'daily', priority: 1 },
     ...properties
       .filter((p) => p.active !== false)
       .map((p) => ({
