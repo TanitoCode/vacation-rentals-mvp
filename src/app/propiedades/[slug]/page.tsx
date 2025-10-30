@@ -1,59 +1,59 @@
 // src/app/propiedades/[slug]/page.tsx
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
-import type { Metadata } from 'next';
 import catalogJson from '@/data/catalog.json';
 import Link from 'next/link';
 import Gallery from '@/components/Gallery';
+import type { Metadata } from 'next';
+import { canonicalFor } from '@/lib/seo';
+
 
 // helper para base URL
 function siteUrl() {
   return process.env.SITE_URL || 'http://localhost:3000';
 }
 
+// --- canónica + metadatos por propiedad ---
 export async function generateMetadata(
-  { params }: { params: Promise<{ slug: string }> }
+  props: { params: Promise<{ slug: string }> }
 ): Promise<Metadata> {
-  const { slug } = await params;
+  // Tomamos el slug de la URL
+  const { slug } = await props.params;
 
-  const catalog: any[] = (catalogJson as any).properties || [];
+  // Reutilizamos tu catálogo existente
+  const catalog = await getCatalog();
   const prop =
     catalog.find((p) => p.slug === slug) ||
     catalog.find((p) => p.id === slug);
 
-  if (!prop) {
-    return {
-      title: 'Propiedad no encontrada · AR Vacations',
-      robots: { index: false, follow: false },
-    };
-  }
+  // Si no existe o está inactiva, no generamos metadatos especiales
+  if (!prop || prop.active === false) return {};
 
-  const name = prop.name || prop.slug || prop.id;
-  const desc =
-    prop.description ||
-    `Alojamiento en Playa del Carmen: ${name}. Reserva segura y disponibilidad al día.`;
-
-  const url = `${siteUrl()}/propiedades/${prop.slug || prop.id}`;
+  const title = prop.name ?? prop.slug ?? prop.id;
+  const description = prop.description ?? 'Alojamiento vacacional.';
 
   return {
-    title: `${name}`,
-    description: desc,
-    alternates: { canonical: url },
+    title,
+    description,
+    alternates: {
+      // canónica estable (solo path), sin querystring
+      canonical: canonicalFor(`/propiedades/${slug}`),
+    },
     openGraph: {
+      title,
+      description,
+      url: `/propiedades/${slug}`,
       type: 'article',
-      url,
-      title: name,
-      description: desc,
       images: prop.images && prop.images.length ? prop.images : undefined,
-      siteName: 'AR Vacations',
     },
     twitter: {
       card: 'summary_large_image',
-      title: name,
-      description: desc,
+      title,
+      description,
     },
   };
 }
+
 
 type CatalogProperty = {
   id: string;
@@ -91,6 +91,8 @@ async function getCatalog(): Promise<CatalogProperty[]> {
   const json = await res.json();
   return (json?.data?.properties ?? []) as CatalogProperty[];
 }
+
+
 
 function buildBookingUrl(base: string, apartmentId: string, start?: string, end?: string) {
   const u = new URL(base);

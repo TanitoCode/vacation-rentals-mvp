@@ -1,9 +1,18 @@
 
 import RatesPreview from "./RatesPreview";
 import AvailabilityPreview from "./AvailabilityPreview";
+import type { Metadata } from 'next';
+import { canonicalFor } from '@/lib/seo';
+
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    alternates: { canonical: canonicalFor('/') },
+  };
+}
 
 export default function Home() {
   const bookingUrl = process.env.SMOOBU_BOOKING_EXTERNAL_URL || '#';
+  
 
   return (
     <main className="mx-auto max-w-xl p-6">
