@@ -14,45 +14,64 @@ function siteUrl() {
 }
 
 // --- canónica + metadatos por propiedad ---
+
 export async function generateMetadata(
   props: { params: Promise<{ slug: string }> }
-): Promise<Metadata> {
-  // Tomamos el slug de la URL
+) {
+  const SITE = process.env.SITE_URL || 'http://localhost:3000';
+
+  // 1) Tomamos el slug de la URL
   const { slug } = await props.params;
 
-  // Reutilizamos tu catálogo existente
-  const catalog = await getCatalog();
+  // 2) Leemos el catálogo (igual que en tu page)
+  const res = await fetch(`${SITE}/api/catalog/properties`, { cache: 'no-store' });
+  const json = await res.json();
+  const catalog = (json?.data?.properties ?? []) as Array<{
+    id: string; slug?: string; name?: string; description?: string; images?: string[];
+  }>;
+
   const prop =
-    catalog.find((p) => p.slug === slug) ||
-    catalog.find((p) => p.id === slug);
+    catalog.find(p => p.slug === slug) ||
+    catalog.find(p => p.id === slug);
 
-  // Si no existe o está inactiva, no generamos metadatos especiales
-  if (!prop || prop.active === false) return {};
+  if (!prop) {
+    return {
+      title: 'Propiedad no encontrada · AR Vacations',
+      alternates: { canonical: `${SITE}/propiedades/${slug}` },
+    };
+  }
 
-  const title = prop.name ?? prop.slug ?? prop.id;
-  const description = prop.description ?? 'Alojamiento vacacional.';
+  const title = `${prop.name ?? prop.slug ?? prop.id} · AR Vacations`;
+  const description = prop.description ?? 'Alojamiento vacacional en Playa del Carmen.';
+
+  // 3) Elegimos imagen OG: 1ª de la propiedad o fallback
+  const firstImg = prop.images?.[0];
+  const isAbsolute = (u?: string) => !!u && /^https?:\/\//i.test(u);
+  const ogImage = isAbsolute(firstImg) ? firstImg : `${SITE}/og-default.jpg`;
+
+  const url = `${SITE}/propiedades/${prop.slug ?? prop.id}`;
 
   return {
     title,
     description,
-    alternates: {
-      // canónica estable (solo path), sin querystring
-      canonical: canonicalFor(`/propiedades/${slug}`),
-    },
+    alternates: { canonical: url },
     openGraph: {
+      type: 'article',
+      siteName: 'AR Vacations',
+      url,
       title,
       description,
-      url: `/propiedades/${slug}`,
-      type: 'article',
-      images: prop.images && prop.images.length ? prop.images : undefined,
+      images: [ogImage],
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description,
+      images: [ogImage],
     },
   };
 }
+
 
 
 type CatalogProperty = {
