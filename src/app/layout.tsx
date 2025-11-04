@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { SITE_ORIGIN } from '@/lib/seo';
+const SITE = process.env.SITE_URL || 'http://localhost:3000';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,24 +15,28 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(SITE_ORIGIN),
-  title: {
-    default: 'AR Vacations | Alquileres vacacionales en Playa del Carmen',
-    template: '%s · AR Vacations',
-  },
+  title: 'AR Vacations | Alquileres vacacionales en Playa del Carmen',
   description:
     'Departamentos y condos en Playa del Carmen. Disponibilidad en tiempo real y reserva segura.',
-  robots: { index: true, follow: true },
+  alternates: { canonical: SITE },
   openGraph: {
     type: 'website',
     siteName: 'AR Vacations',
-    url: '/',
+    url: SITE,
+    title: 'AR Vacations | Alquileres vacacionales en Playa del Carmen',
+    description:
+      'Departamentos y condos en Playa del Carmen. Disponibilidad en tiempo real y reserva segura.',
+    images: [`${SITE}/og-default.jpg`], // fallback global
   },
   twitter: {
     card: 'summary_large_image',
-    site: '@arvacations',
+    title: 'AR Vacations | Alquileres vacacionales en Playa del Carmen',
+    description:
+      'Departamentos y condos en Playa del Carmen. Disponibilidad en tiempo real y reserva segura.',
+    images: [`${SITE}/og-default.jpg`],
   },
 };
+
 
 export default function RootLayout({
   children,
