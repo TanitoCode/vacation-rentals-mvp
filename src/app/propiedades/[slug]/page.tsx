@@ -15,59 +15,53 @@ function siteUrl() {
 
 // --- canónica + metadatos por propiedad ---
 
+// --- canónica + metadatos por propiedad ---
 export async function generateMetadata(
   props: { params: Promise<{ slug: string }> }
-) {
+): Promise<Metadata> {
+  const { slug } = await props.params;
   const SITE = process.env.SITE_URL || 'http://localhost:3000';
 
-  // 1) Tomamos el slug de la URL
-  const { slug } = await props.params;
-
-  // 2) Leemos el catálogo (igual que en tu page)
-  const res = await fetch(`${SITE}/api/catalog/properties`, { cache: 'no-store' });
-  const json = await res.json();
-  const catalog = (json?.data?.properties ?? []) as Array<{
-    id: string; slug?: string; name?: string; description?: string; images?: string[];
-  }>;
+  // Obtenemos el catálogo (usa el helper ya definido arriba)
+  let catalog: CatalogProperty[] = [];
+  try {
+    catalog = await getCatalog();
+  } catch {
+    // noop
+  }
 
   const prop =
     catalog.find(p => p.slug === slug) ||
     catalog.find(p => p.id === slug);
 
-  if (!prop) {
-    return {
-      title: 'Propiedad no encontrada · AR Vacations',
-      alternates: { canonical: `${SITE}/propiedades/${slug}` },
-    };
-  }
+  const name = prop?.name ?? slug.toUpperCase();
+  const desc =
+    prop?.description ??
+    'Departamento en alquiler vacacional. Reserva segura en AR Vacations.';
+  const canonical = `/propiedades/${slug}`; // relativo (layout ya define metadataBase)
 
-  const title = `${prop.name ?? prop.slug ?? prop.id} · AR Vacations`;
-  const description = prop.description ?? 'Alojamiento vacacional en Playa del Carmen.';
-
-  // 3) Elegimos imagen OG: 1ª de la propiedad o fallback
-  const firstImg = prop.images?.[0];
-  const isAbsolute = (u?: string) => !!u && /^https?:\/\//i.test(u);
-  const ogImage = isAbsolute(firstImg) ? firstImg : `${SITE}/og-default.jpg`;
-
-  const url = `${SITE}/propiedades/${prop.slug ?? prop.id}`;
+  // 1ª imagen de la propiedad o fallback global
+  const ogImg = (prop?.images && prop.images[0])
+    ? prop.images[0]
+    : '/og-default.jpg';
 
   return {
-    title,
-    description,
-    alternates: { canonical: url },
+    title: `${name} · AR Vacations`,
+    description: desc,
+    alternates: { canonical }, // se resuelve con metadataBase del layout
     openGraph: {
       type: 'article',
       siteName: 'AR Vacations',
-      url,
-      title,
-      description,
-      images: [ogImage],
+      url: canonical,
+      title: `${name} · AR Vacations`,
+      description: desc,
+      images: [ogImg],
     },
     twitter: {
       card: 'summary_large_image',
-      title,
-      description,
-      images: [ogImage],
+      title: `${name} · AR Vacations`,
+      description: desc,
+      images: [ogImg],
     },
   };
 }
