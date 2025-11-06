@@ -15,25 +15,33 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  // 👇 Esto hace que todas las URLs relativas apunten al dominio correcto (prod/dev)
+  metadataBase: new URL(SITE),
+
   title: 'AR Vacations | Alquileres vacacionales en Playa del Carmen',
   description:
     'Departamentos y condos en Playa del Carmen. Disponibilidad en tiempo real y reserva segura.',
-  alternates: { canonical: SITE },
+
+  // Para la home, canonical relativo (resuelto con metadataBase)
+  alternates: { canonical: '/' },
+
   openGraph: {
     type: 'website',
     siteName: 'AR Vacations',
-    url: SITE,
+    url: '/', // se resuelve a SITE
     title: 'AR Vacations | Alquileres vacacionales en Playa del Carmen',
     description:
       'Departamentos y condos en Playa del Carmen. Disponibilidad en tiempo real y reserva segura.',
-    images: [`${SITE}/og-default.jpg`], // fallback global
+    images: ['/og-default.jpg'], // 👈 relativo, más seguro
   },
+
+  // “Twitter” = X. Sigue llamándose “twitter” en la API de Next/HTML.
   twitter: {
     card: 'summary_large_image',
     title: 'AR Vacations | Alquileres vacacionales en Playa del Carmen',
     description:
       'Departamentos y condos en Playa del Carmen. Disponibilidad en tiempo real y reserva segura.',
-    images: [`${SITE}/og-default.jpg`],
+    images: ['/og-default.jpg'], // relativo
   },
 };
 
