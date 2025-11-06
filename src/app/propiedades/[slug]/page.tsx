@@ -1,72 +1,11 @@
 // src/app/propiedades/[slug]/page.tsx
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
-import catalogJson from '@/data/catalog.json';
 import Link from 'next/link';
-import Gallery from '@/components/Gallery';
-import type { Metadata } from 'next';
-import { canonicalFor } from '@/lib/seo';
 
-
-// helper para base URL
-function siteUrl() {
-  return process.env.SITE_URL || 'http://localhost:3000';
-}
-
-// --- canónica + metadatos por propiedad ---
-
-// --- canónica + metadatos por propiedad ---
-export async function generateMetadata(
-  props: { params: Promise<{ slug: string }> }
-): Promise<Metadata> {
-  const { slug } = await props.params;
-  const SITE = process.env.SITE_URL || 'http://localhost:3000';
-
-  // Obtenemos el catálogo (usa el helper ya definido arriba)
-  let catalog: CatalogProperty[] = [];
-  try {
-    catalog = await getCatalog();
-  } catch {
-    // noop
-  }
-
-  const prop =
-    catalog.find(p => p.slug === slug) ||
-    catalog.find(p => p.id === slug);
-
-  const name = prop?.name ?? slug.toUpperCase();
-  const desc =
-    prop?.description ??
-    'Departamento en alquiler vacacional. Reserva segura en AR Vacations.';
-  const canonical = `/propiedades/${slug}`; // relativo (layout ya define metadataBase)
-
-  // 1ª imagen de la propiedad o fallback global
-  const ogImg = (prop?.images && prop.images[0])
-    ? prop.images[0]
-    : '/og-default.jpg';
-
-  return {
-    title: `${name} · AR Vacations`,
-    description: desc,
-    alternates: { canonical }, // se resuelve con metadataBase del layout
-    openGraph: {
-      type: 'article',
-      siteName: 'AR Vacations',
-      url: canonical,
-      title: `${name} · AR Vacations`,
-      description: desc,
-      images: [ogImg],
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title: `${name} · AR Vacations`,
-      description: desc,
-      images: [ogImg],
-    },
-  };
-}
-
-
+// Usa rutas relativas (evita problemas de alias @/)
+import Gallery from '../../../components/Gallery';
+import SectionCard from '../../../components/SectionCard';
 
 type CatalogProperty = {
   id: string;
@@ -80,15 +19,12 @@ type CatalogProperty = {
   bathrooms?: number;
   pms?: { smoobu?: { apartmentId?: string } };
   location?: {
-    lat?: number;
-    lng?: number;
     address?: string;
     city?: string;
     country?: string;
-    mapsUrl?: string; // <--- NUEVO
+    mapsUrl?: string;
   };
 };
-
 
 // URL absoluta robusta para SSR
 async function absUrl(pathname: string) {
@@ -105,58 +41,13 @@ async function getCatalog(): Promise<CatalogProperty[]> {
   return (json?.data?.properties ?? []) as CatalogProperty[];
 }
 
-
-
 function buildBookingUrl(base: string, apartmentId: string, start?: string, end?: string) {
   const u = new URL(base);
   u.searchParams.set('apartmentId', apartmentId);
-  if (start) u.searchParams.set('arrival', start);   // best-effort
+  if (start) u.searchParams.set('arrival', start);
   if (end) u.searchParams.set('departure', end);
   return u.toString();
 }
-
-function buildMapsLink(loc?: CatalogProperty['location']) {
-  if (!loc) return null;
-  if (loc.mapsUrl) return loc.mapsUrl; // <--- PRIORIDAD: si viene el link, lo usamos
-  if (typeof loc.lat === 'number' && typeof loc.lng === 'number') {
-    return `https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}`;
-  }
-  const q = [loc.address, loc.city, loc.country].filter(Boolean).join(', ');
-  return q ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}` : null;
-}
-
-function buildMapsEmbedUrl(loc?: CatalogProperty['location']) {
-  if (!loc) return null;
-
-  // Prioridad 1: coordenadas (más precisas y estables)
-  if (typeof loc.lat === 'number' && typeof loc.lng === 'number') {
-    // z=16 es un zoom urbano cómodo; podés ajustar
-    return `https://www.google.com/maps?q=${loc.lat},${loc.lng}&z=16&output=embed`;
-  }
-
-  // Prioridad 2: address/city/country (si no hay lat/lng)
-  const q = [loc.address, loc.city, loc.country].filter(Boolean).join(', ');
-  if (q) {
-    return `https://www.google.com/maps?q=${encodeURIComponent(q)}&z=16&output=embed`;
-  }
-
-  // Si solo tenés mapsUrl (deep link), usamos el link normal (no siempre es "embed friendly")
-  if (loc.mapsUrl) {
-    // fallback básico: buscamos query en mapsUrl; si no, usamos tal cual
-    try {
-      const u = new URL(loc.mapsUrl);
-      const query = u.searchParams.get('q') || u.pathname.replace(/^\/+/, '');
-      if (query) return `https://www.google.com/maps?q=${encodeURIComponent(query)}&z=16&output=embed`;
-    } catch {
-      /* ignore */
-    }
-    return null;
-  }
-
-  return null;
-}
-
-
 
 async function getUnitAvailability(aptId: string, start?: string, end?: string, guests?: number) {
   if (!start || !end) return null; // sin fechas no consultamos
@@ -185,46 +76,87 @@ async function getUnitAvailability(aptId: string, start?: string, end?: string, 
   return q ?? { apartmentId: aptId, available: false, total: 0 };
 }
 
-function PropertyJsonLd({ prop, url }: { prop: any; url: string }) {
-  const address = prop.location || {};
-  const images = Array.isArray(prop.images) ? prop.images : [];
-
-  const jsonLd = {
+// JSON-LD para SEO
+function PropertyJsonLd({ prop, url }: { prop: CatalogProperty; url: string }) {
+  const data = {
     '@context': 'https://schema.org',
     '@type': 'Apartment',
-    name: prop.name || prop.slug || prop.id,
+    name: prop.name ?? prop.slug ?? prop.id,
     url,
-    description: prop.description || undefined,
-    image: images.length ? images : undefined,
-    numberOfRooms: prop.bedrooms || undefined,
-    occupancy: prop.capacity ? { '@type': 'QuantitativeValue', value: prop.capacity } : undefined,
-    address: (address.address || address.city || address.country)
+    description: prop.description ?? '',
+    image: (prop.images && prop.images.length > 0) ? prop.images : undefined,
+    numberOfRooms: prop.bedrooms ?? undefined,
+    occupancy: prop.capacity
+      ? { '@type': 'QuantitativeValue', value: prop.capacity }
+      : undefined,
+    address: prop.location?.address
       ? {
           '@type': 'PostalAddress',
-          streetAddress: address.address || undefined,
-          addressLocality: address.city || undefined,
-          addressCountry: address.country || 'MX',
+          streetAddress: prop.location.address,
+          addressLocality: prop.location?.city,
+          addressCountry: prop.location?.country,
         }
       : undefined,
   };
-
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
     />
   );
 }
 
+// --- canónica + metadatos por propiedad ---
+export async function generateMetadata(props: { params: Promise<{ slug: string }> }) {
+  const { slug } = await props.params;
+  const SITE = process.env.SITE_URL || 'http://localhost:3000';
 
+  const catalog = await getCatalog();
+  const prop =
+    catalog.find((p) => p.slug === slug) ||
+    catalog.find((p) => p.id === slug);
 
-export default async function Page(
-  props: {
-    // 👇 En Next 15, ambos llegan como Promesas
-    params: Promise<{ slug: string }>;
-    searchParams: Promise<Record<string, string | string[] | undefined>>;
+  if (!prop || prop.active === false) {
+    return {
+      title: 'Propiedad no encontrada · AR Vacations',
+      description: 'Verifica el enlace o vuelve al listado.',
+      alternates: { canonical: `${SITE}/propiedades/${slug}` },
+    };
   }
-) {
+
+  const title = `${prop.name ?? prop.slug ?? prop.id} · AR Vacations`;
+  const description =
+    prop.description ??
+    'Departamentos y condos en Playa del Carmen. Disponibilidad en tiempo real y reserva segura.';
+  const url = `${SITE}/propiedades/${slug}`;
+  const images =
+    prop.images?.length ? prop.images : [`${SITE}/og-default.jpg`];
+
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      type: 'article',
+      siteName: 'AR Vacations',
+      title,
+      description,
+      url,
+      images,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images,
+    },
+  };
+}
+
+export default async function Page(props: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   // ✅ Esperamos ambas promesas ANTES de usarlas
   const [{ slug }, sp] = await Promise.all([props.params, props.searchParams]);
 
@@ -238,9 +170,6 @@ export default async function Page(
   const activeCount = catalog.filter((p) => p.active !== false).length;
 
   const name = prop.name ?? prop.slug ?? prop.id;
-  const mapsHref = buildMapsLink(prop.location);
-  const mapsEmbed = buildMapsEmbedUrl(prop.location);
-
   const bookingBase = process.env.SMOOBU_BOOKING_EXTERNAL_URL || '#';
   const aptId = prop.pms?.smoobu?.apartmentId ?? undefined;
 
@@ -259,38 +188,63 @@ export default async function Page(
     : bookingBase;
 
   // Link a la home con las mismas fechas para ver otras disponibles (solo si hay +1 activa)
-  const otherAvailableHref =
-    hasDates ? `/?start=${start}&end=${end}&guests=${guests}` : '/';
+  const otherAvailableHref = hasDates
+    ? `/?start=${start}&end=${end}&guests=${guests}`
+    : '/';
   const showOtherBtn = activeCount > 1 && hasDates && isAvail === false;
 
-
-  
-  const canonical =
-  `${process.env.SITE_URL || 'http://localhost:3000'}/propiedades/${prop.slug || prop.id}`;
+  const SITE = process.env.SITE_URL || 'http://localhost:3000';
+  const pageUrl = `${SITE}/propiedades/${slug}`;
 
   return (
     <main className="mx-auto max-w-4xl p-6">
-      <h1 className="text-2xl font-bold mb-4">{name}</h1>
- <PropertyJsonLd prop={prop} url={canonical} />   {/* ← AQUÍ, debajo del H1 */}
+      <h1 className="mb-4 text-2xl font-bold">{name}</h1>
+      <PropertyJsonLd prop={prop} url={pageUrl} />
+
       {/* Filtro local: fechas y huéspedes */}
       <form method="get" className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-4">
         <div>
-          <label className="block text-sm text-slate-400 mb-1" htmlFor="start">Desde</label>
-          <input id="start" name="start" type="date" defaultValue={start}
-            className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2" />
+          <label className="mb-1 block text-sm text-slate-400" htmlFor="start">
+            Desde
+          </label>
+          <input
+            id="start"
+            name="start"
+            type="date"
+            defaultValue={start}
+            className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2"
+          />
         </div>
         <div>
-          <label className="block text-sm text-slate-400 mb-1" htmlFor="end">Hasta</label>
-          <input id="end" name="end" type="date" defaultValue={end}
-            className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2" />
+          <label className="mb-1 block text-sm text-slate-400" htmlFor="end">
+            Hasta
+          </label>
+          <input
+            id="end"
+            name="end"
+            type="date"
+            defaultValue={end}
+            className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2"
+          />
         </div>
         <div>
-          <label className="block text-sm text-slate-400 mb-1" htmlFor="guests">Huéspedes</label>
-          <input id="guests" name="guests" type="number" min={1} defaultValue={String(guests)}
-            className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2" />
+          <label className="mb-1 block text-sm text-slate-400" htmlFor="guests">
+            Huéspedes
+          </label>
+          <input
+            id="guests"
+            name="guests"
+            type="number"
+            min={1}
+            defaultValue={String(guests)}
+            className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2"
+          />
         </div>
         <div className="flex items-end">
-          <button type="submit" className="w-full rounded bg-slate-700 px-4 py-2 text-white hover:bg-slate-600">
+          <button
+            type="submit"
+            className="w-full rounded bg-slate-700 px-4 py-2 text-white hover:bg-slate-600"
+          >
             Aplicar
           </button>
         </div>
@@ -322,114 +276,100 @@ export default async function Page(
         </div>
       )}
 
-      {/* Galería si hay imágenes; si no, placeholder */}
-      {(prop.images?.length ?? 0) > 0 ? (
-        <Gallery images={prop.images!} name={name} />
-      ) : (
-        <div className="mb-4 aspect-video w-full rounded bg-slate-800/30" />
-      )}
+      {/* Galería (usa tu componente existente) */}
+      <section className="mb-4 outline-none" aria-label="Galería de imágenes">
+        <Gallery images={prop.images ?? []} name={name} />
+      </section>
 
+      {/* Layout en tarjetas (nueva estética) */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Columna izquierda: Descripción + Mapa */}
+        <div className="space-y-6 lg:col-span-2">
+          <SectionCard title="Descripción">
+            <p>{prop.description ?? 'Sin descripción por ahora.'}</p>
+          </SectionCard>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <section>
-          <h2 className="font-semibold mb-2">Descripción</h2>
-          <p className="text-slate-300">{prop.description ?? 'Sin descripción por ahora.'}</p>
-        </section>
+          <SectionCard title="Mapa">
+            <div className="aspect-video w-full overflow-hidden rounded-xl border border-slate-700/60">
+              <iframe
+                src={`https://www.google.com/maps?q=${encodeURIComponent(
+                  prop.location?.address ?? 'Playa del Carmen'
+                )}&z=16&output=embed`}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                allowFullScreen
+                className="h-full w-full"
+                title={`Mapa de ${name}`}
+              />
+            </div>
 
-<section>
-  <h2 className="font-semibold mb-2">Detalles</h2>
+            <div className="mt-3">
+              <a
+                href={prop.location?.mapsUrl ?? '#'}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center rounded-lg border border-slate-600/70 px-3 py-1.5 text-slate-100 hover:bg-slate-800"
+              >
+                Ver en Google Maps
+              </a>
+            </div>
+          </SectionCard>
+        </div>
 
-  <ul className="text-slate-300 space-y-1">
-    <li><span className="text-slate-400">ID:</span> {prop.id}</li>
-    {prop.capacity  !== undefined && (
-      <li><span className="text-slate-400">Capacidad:</span> {prop.capacity}</li>
-    )}
-    {prop.bedrooms  !== undefined && (
-      <li><span className="text-slate-400">Dormitorios:</span> {prop.bedrooms}</li>
-    )}
-    {prop.bathrooms !== undefined && (
-      <li><span className="text-slate-400">Baños:</span> {prop.bathrooms}</li>
-    )}
+        {/* Columna derecha: Detalles + Acción */}
+        <div className="lg:col-span-1">
+          <SectionCard title="Detalles" className="sticky top-6">
+            <dl className="grid grid-cols-1 gap-2 text-sm">
+              <div className="grid grid-cols-2 gap-2">
+                <dt className="text-slate-400">ID</dt>
+                <dd>{prop.id}</dd>
+              </div>
+              {prop.capacity !== undefined && (
+                <div className="grid grid-cols-2 gap-2">
+                  <dt className="text-slate-400">Capacidad</dt>
+                  <dd>{prop.capacity}</dd>
+                </div>
+              )}
+              {prop.bedrooms !== undefined && (
+                <div className="grid grid-cols-2 gap-2">
+                  <dt className="text-slate-400">Dormitorios</dt>
+                  <dd>{prop.bedrooms}</dd>
+                </div>
+              )}
+              {prop.bathrooms !== undefined && (
+                <div className="grid grid-cols-2 gap-2">
+                  <dt className="text-slate-400">Baños</dt>
+                  <dd>{prop.bathrooms}</dd>
+                </div>
+              )}
+              {prop.location?.address && (
+                <div className="grid grid-cols-2 gap-2">
+                  <dt className="text-slate-400">Ubicación</dt>
+                  <dd className="leading-snug">{prop.location.address}</dd>
+                </div>
+              )}
+            </dl>
 
-    {(prop.location?.address || prop.location?.city || prop.location?.country) && (
-      <li>
-        <span className="text-slate-400">Ubicación:</span>{' '}
-        {[
-          prop.location?.address,
-          prop.location?.city,
-          prop.location?.country
-        ].filter(Boolean).join(', ')}
-      </li>
-    )}
-
-    {/* Mostrar el botón AQUÍ solo si NO hay iframe (para no duplicar) */}
-    {mapsHref && !mapsEmbed && (
-      <li className="mt-2">
-        <a
-          href={mapsHref}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center rounded border border-slate-600 px-3 py-1 hover:bg-slate-800"
-        >
-          Ver en Google Maps
-        </a>
-      </li>
-    )}
-  </ul>
-
-  {/* Botón reservar (sin onClick; es Server Component) */}
-  {isAvail === false ? (
-    <div
-      className="mt-4 inline-flex items-center rounded bg-slate-600 px-4 py-2 text-white opacity-50 cursor-not-allowed"
-      aria-disabled="true"
-    >
-      No disponible para estas fechas
-    </div>
-  ) : (
-    <a
-      href={reservarHref}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="mt-4 inline-flex items-center rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-    >
-      Reservar en Smoobu
-    </a>
-  )}
-</section>
-
-  </div>
-{mapsEmbed && (
-  <section className="mt-6">
-    <h2 className="font-semibold mb-2">Mapa</h2>
-    <div className="aspect-video w-full overflow-hidden rounded border border-slate-700">
-      <iframe
-        src={mapsEmbed}
-        loading="lazy"
-        referrerPolicy="no-referrer-when-downgrade"
-        allowFullScreen
-        className="h-full w-full"
-        title={`Mapa de ${name}`}
-      />
-    </div>
-    {mapsHref && (
-      <div className="mt-2">
-        <a
-          href={mapsHref}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center rounded border border-slate-600 px-3 py-1 hover:bg-slate-800"
-        >
-          Ver en Google Maps
-        </a>
+            {isAvail === false ? (
+              <div
+                className="mt-5 inline-flex w-full items-center justify-center rounded-lg bg-slate-600 px-4 py-2 text-white opacity-60"
+                aria-disabled="true"
+              >
+                No disponible para estas fechas
+              </div>
+            ) : (
+              <a
+                href={reservarHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-5 inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+              >
+                Reservar en Smoobu
+              </a>
+            )}
+          </SectionCard>
+        </div>
       </div>
-    )}
-  </section>
-)}
-
-
-
-
-    
     </main>
   );
 }
