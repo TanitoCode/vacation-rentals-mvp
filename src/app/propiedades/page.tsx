@@ -1,6 +1,6 @@
 // src/app/propiedades/page.tsx
-import Link from 'next/link';
-import { headers } from 'next/headers';
+import { headers } from "next/headers";
+import PropertyCard from "@/components/PropertyCard";
 
 type CatalogProperty = {
   id: string;
@@ -8,74 +8,97 @@ type CatalogProperty = {
   slug?: string;
   active?: boolean;
   images?: string[];
-  pms?: { smoobu?: { apartmentId?: string } };
+  capacity?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  location?: {
+    address?: string;
+    city?: string;
+    country?: string;
+  };
 };
 
-async function getCatalog(): Promise<CatalogProperty[]> {
-  // Construye URL absoluta para SSR
-  const h = await headers(); // FIX: en tu proyecto es Promise<ReadonlyHeaders>
-  const host =
-    h.get('x-forwarded-host') ??
-    h.get('host') ??
-    'localhost:3000';
-  const proto = h.get('x-forwarded-proto') ?? 'http';
+export const metadata = {
+  title: "Propiedades · AR Vacations",
+  description:
+    "Listado de departamentos y condos con disponibilidad y reserva segura.",
+  alternates: { canonical: "/propiedades" },
+};
 
-  const url = `${proto}://${host}/api/catalog/properties`;
-
-  const res = await fetch(url, { cache: 'no-store' });
-  const json = await res.json();
-  const list = json?.data?.properties ?? [];
-  return (list as CatalogProperty[]).filter(p => p.active !== false);
+async function absUrl(pathname: string) {
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
+  const proto = h.get("x-forwarded-proto") ?? "http";
+  return `${proto}://${host}${pathname}`;
 }
-export default async function Page() {
-  const bookingUrl = process.env.SMOOBU_BOOKING_EXTERNAL_URL || '#';
-  const properties = await getCatalog();
+
+async function getCatalog(): Promise<CatalogProperty[]> {
+  const url = await absUrl("/api/catalog/properties");
+  const res = await fetch(url, { cache: "no-store" });
+  const json = await res.json();
+  return (json?.data?.properties ?? []) as CatalogProperty[];
+}
+
+function withQuery(base: string, qs: Record<string, string | undefined>) {
+  const u = new URL(base, "http://dummy");
+  Object.entries(qs).forEach(([k, v]) => v && u.searchParams.set(k, v));
+  return u.pathname + (u.search ? u.search : "");
+}
+
+export default async function Page({
+  searchParams,
+}: {
+  searchParams?: { start?: string; end?: string; guests?: string };
+}) {
+  const props = await getCatalog();
+  const items = props.filter((p) => p.active !== false);
+
+  const q = {
+    start: searchParams?.start,
+    end: searchParams?.end,
+    guests: searchParams?.guests,
+  };
 
   return (
-    <main className="mx-auto max-w-5xl p-6">
-      <h1 className="text-2xl font-bold mb-4">Propiedades</h1>
+    <main className="mx-auto max-w-6xl p-6">
+      <header className="mb-6">
+        <h1 className="text-2xl font-bold">Propiedades</h1>
+        <p className="mt-1 text-slate-400">
+          Elegí una unidad. Si definiste fechas en la home o en otra ficha,
+          las mantenemos al abrir el detalle.
+        </p>
+      </header>
 
-      {properties.length === 0 ? (
-        <p className="text-slate-600">Aún no hay propiedades en el catálogo.</p>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {properties.map((p) => {
-            const name = p.name ?? p.slug ?? p.id;
-            const apartmentId = p.pms?.smoobu?.apartmentId;
-            const reservarHref = apartmentId
-              ? `${bookingUrl}?apartmentId=${apartmentId}`
-              : bookingUrl;
+      <section className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {items.map((p) => {
+          const title = p.name ?? p.slug ?? p.id;
+          const img = p.images?.[0];
+          const location =
+            p.location?.address ||
+            [p.location?.city, p.location?.country].filter(Boolean).join(", ") ||
+            undefined;
+          const badges = [
+            p.capacity ? `${p.capacity} huéspedes` : null,
+            p.bedrooms ? `${p.bedrooms} dorm.` : null,
+            p.bathrooms
+              ? `${p.bathrooms} baño${p.bathrooms > 1 ? "s" : ""}`
+              : null,
+          ].filter(Boolean) as string[];
 
-            return (
-              <article key={p.id} className="rounded border p-4">
-                {/* Mini portada si tenés imágenes (opcional) */}
-                {/* {p.images?.[0] && (
-                  <img src={p.images[0]} alt={name} className="mb-3 aspect-video w-full rounded object-cover" />
-                )} */}
-                <h2 className="font-semibold">{name}</h2>
-                <p className="text-sm text-slate-600">ID: {p.id}</p>
+          const href = withQuery(`/propiedades/${p.slug ?? p.id}`, q);
 
-                <div className="mt-3 flex gap-2">
-                  <a
-                    href={reservarHref}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded bg-blue-600 px-3 py-1.5 text-white hover:bg-blue-700"
-                  >
-                    Reservar
-                  </a>
-                  <Link
-                    href={`/propiedades/${p.slug ?? p.id}`}
-                    className="rounded border px-3 py-1.5 hover:bg-slate-50"
-                  >
-                    Ver detalles
-                  </Link>
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      )}
+          return (
+            <PropertyCard
+              key={p.id}
+              href={href}
+              title={title}
+              imageUrl={img ?? "/og-default.jpg"}
+              location={location}
+              badges={badges}
+            />
+          );
+        })}
+      </section>
     </main>
   );
 }
