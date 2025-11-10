@@ -3,9 +3,9 @@ import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 
-// Usa rutas relativas (evita problemas de alias @/)
 import Gallery from '../../../components/Gallery';
 import SectionCard from '../../../components/SectionCard';
+import HeroBanner from '../../../components/HeroBanner';
 
 type CatalogProperty = {
   id: string;
@@ -196,13 +196,32 @@ export default async function Page(props: {
   const SITE = process.env.SITE_URL || 'http://localhost:3000';
   const pageUrl = `${SITE}/propiedades/${slug}`;
 
+  // --- Datos para el Hero ---
+  const heroImage = prop.images?.[0]; // primera imagen como portada
+  const locationLine =
+    prop.location?.address ||
+    [prop.location?.city, prop.location?.country].filter(Boolean).join(', ') ||
+    undefined;
+  const badges = [
+    prop.capacity ? `${prop.capacity} huéspedes` : null,
+    prop.bedrooms ? `${prop.bedrooms} dorm.` : null,
+    prop.bathrooms ? `${prop.bathrooms} baño${prop.bathrooms > 1 ? 's' : ''}` : null,
+  ].filter(Boolean) as string[];
+
   return (
     <main className="mx-auto max-w-4xl p-6">
-      <h1 className="mb-4 text-2xl font-bold">{name}</h1>
+      {/* HERO */}
+      <HeroBanner
+        title={name}
+        subtitle={locationLine}
+        imageUrl={heroImage}
+        badges={badges}
+      />
+
       <PropertyJsonLd prop={prop} url={pageUrl} />
 
       {/* Filtro local: fechas y huéspedes */}
-      <form method="get" className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-4">
+      <form id="disponibilidad" method="get" className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-4">
         <div>
           <label className="mb-1 block text-sm text-slate-400" htmlFor="start">
             Desde
@@ -276,12 +295,12 @@ export default async function Page(props: {
         </div>
       )}
 
-      {/* Galería (usa tu componente existente) */}
+      {/* Galería (dejamos como está por ahora) */}
       <section className="mb-4 outline-none" aria-label="Galería de imágenes">
         <Gallery images={prop.images ?? []} name={name} />
       </section>
 
-      {/* Layout en tarjetas (nueva estética) */}
+      {/* Layout en tarjetas */}
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Columna izquierda: Descripción + Mapa */}
         <div className="space-y-6 lg:col-span-2">
